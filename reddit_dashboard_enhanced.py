@@ -93,7 +93,28 @@ DB_NAME = 'reddit_sentiment'
 
 @st.cache_resource
 def get_mongo_client():
-    return MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    """
+    Creates MongoDB client with proper SSL/TLS configuration for Streamlit Cloud.
+    """
+    try:
+        # Add SSL/TLS parameters and longer timeout for cloud deployment
+        client = MongoClient(
+            MONGO_URI,
+            serverSelectionTimeoutMS=30000,  # Increased timeout for cloud
+            connectTimeoutMS=30000,
+            socketTimeoutMS=30000,
+            tls=True,  # Explicit TLS
+            tlsAllowInvalidCertificates=False,  # Security best practice
+            retryWrites=True,
+            w='majority'
+        )
+        # Test the connection
+        client.admin.command('ping')
+        return client
+    except Exception as e:
+        st.error(f"Failed to connect to MongoDB: {e}")
+        st.info("Please check your connection string and MongoDB Atlas network settings.")
+        raise
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes (matches the auto-refresh interval)
 def load_data():
